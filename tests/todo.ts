@@ -34,19 +34,23 @@ describe("todo", () => {
     });
   });
 
-  describe.only("add", () => {
+  describe("add", () => {
     it("Anyone can add an item to a list", async () => {
       const [owner, adder] = await createUsers(2);
       const adderStartingBalance = await getAccountBalance(adder.key.publicKey);
       const list = await createList(owner, "list");
+
       const result = await addItem({
-        list,
+        listName: list.data.name,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
         user: adder,
         name: "Do something",
         bounty: 1 * LAMPORTS_PER_SOL,
       });
+
       expect(result.list.data.lines, "item is added").deep.equals([
-        result.item.publicKey,
+        result.item.pda,
       ]);
       expect(
         result.item.data.creator.toString(),
@@ -62,7 +66,7 @@ describe("todo", () => {
       ).equals(false);
       expect(result.item.data.name, "Name is set").equals("Do something");
       expect(
-        await getAccountBalance(result.item.publicKey),
+        await getAccountBalance(result.item.pda),
         "List account balance"
       ).equals(1 * LAMPORTS_PER_SOL);
 
@@ -72,16 +76,19 @@ describe("todo", () => {
         LAMPORTS_PER_SOL,
         "Number of lamports removed from adder is equal to bounty"
       );
+
       // Test that another add works
       const again = await addItem({
-        list,
+        listName: list.data.name,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
         user: adder,
         name: "Another item",
         bounty: 1 * LAMPORTS_PER_SOL,
       });
       expect(again.list.data.lines, "Item is added").deep.equals([
-        result.item.publicKey,
-        again.item.publicKey,
+        result.item.pda,
+        again.item.pda,
       ]);
     });
 
@@ -93,7 +100,9 @@ describe("todo", () => {
       await Promise.all(
         new Array(MAX_LIST_SIZE).fill("").map((_, i) => {
           return addItem({
-            list,
+            listName: list.data.name,
+            listPDA: list.publicKey,
+            listOwner: list.data.listOwner,
             user: owner,
             name: `Item ${i}`,
             bounty: 1 * LAMPORTS_PER_SOL,
@@ -105,7 +114,9 @@ describe("todo", () => {
 
       try {
         let addResult = await addItem({
-          list,
+          listName: list.data.name,
+          listPDA: list.publicKey,
+          listOwner: list.data.listOwner,
           user: owner,
           name: "Full item",
           bounty: 1 * LAMPORTS_PER_SOL,
@@ -129,7 +140,9 @@ describe("todo", () => {
 
       try {
         await addItem({
-          list,
+          listName: list.data.name,
+          listPDA: list.publicKey,
+          listOwner: list.data.listOwner,
           user: owner,
           name: "Small bounty item",
           bounty: 10,
@@ -156,7 +169,9 @@ describe("todo", () => {
       const adderStartingBalance = await getAccountBalance(adder.key.publicKey);
 
       const result = await addItem({
-        list,
+        listName: list.data.name,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
         user: adder,
         bounty: LAMPORTS_PER_SOL,
         name: "An item",
@@ -165,15 +180,16 @@ describe("todo", () => {
       const adderBalanceAfterAdd = await getAccountBalance(adder.key.publicKey);
 
       expect(result.list.data.lines, "Item is added to list").deep.equals([
-        result.item.publicKey,
+        result.item.pda,
       ]);
       expect(adderBalanceAfterAdd, "Bounty is removed from adder").lt(
         adderStartingBalance
       );
 
       const cancelResult = await cancelItem({
-        list,
-        item: result.item,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
+        itemPDA: result.item.pda,
         itemCreator: adder,
         user: owner,
       });
@@ -198,7 +214,9 @@ describe("todo", () => {
       const adderStartingBalance = await getAccountBalance(adder.key.publicKey);
 
       const result = await addItem({
-        list,
+        listName: list.data.name,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
         user: adder,
         bounty: LAMPORTS_PER_SOL,
         name: "An item",
@@ -207,15 +225,16 @@ describe("todo", () => {
       const adderBalanceAfterAdd = await getAccountBalance(adder.key.publicKey);
 
       expect(result.list.data.lines, "Item is added to list").deep.equals([
-        result.item.publicKey,
+        result.item.pda,
       ]);
       expect(adderBalanceAfterAdd, "Bounty is removed from adder").lt(
         adderStartingBalance
       );
 
       const cancelResult = await cancelItem({
-        list,
-        item: result.item,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
+        itemPDA: result.item.pda,
         itemCreator: adder,
         user: adder,
       });
@@ -239,23 +258,33 @@ describe("todo", () => {
       const list = await createList(owner, "list");
 
       const result = await addItem({
-        list,
+        listName: list.data.name,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
         user: adder,
         bounty: LAMPORTS_PER_SOL,
         name: "An item",
       });
 
+      expect(result.list.data.lines, "Item is added to list").deep.equals([
+        result.item.pda,
+      ]);
+
       try {
         await cancelItem({
-          list,
-          item: result.item,
+          listPDA: list.publicKey,
+          listOwner: list.data.listOwner,
+          itemPDA: result.item.pda,
           itemCreator: owner, // Wrong creator
           user: owner,
         });
         expect.fail(`Listing the wrong item creator should fail`);
       } catch (e) {
+        // expect(e.toString(), "Error message").equals(
+        //   "Specified item creator does not match the pubkey in the item"
+        // );
         expect(e.toString(), "Error message").equals(
-          "Specified item creator does not match the pubkey in the item"
+          "A seeds constraint was violated"
         );
       }
     });
@@ -268,7 +297,9 @@ describe("todo", () => {
       ]);
 
       const result = await addItem({
-        list: list1,
+        listName: list1.data.name,
+        listPDA: list1.publicKey,
+        listOwner: list1.data.listOwner,
         user: adder,
         bounty: LAMPORTS_PER_SOL,
         name: "An item",
@@ -276,8 +307,9 @@ describe("todo", () => {
 
       try {
         await cancelItem({
-          list: list2, // Wrong list
-          item: result.item,
+          listPDA: list2.publicKey,
+          listOwner: list2.data.listOwner,
+          itemPDA: result.item.pda, // Wrong list
           itemCreator: adder,
           user: owner,
         });
@@ -290,7 +322,7 @@ describe("todo", () => {
     });
   });
 
-  describe("finish", () => {
+  describe.only("finish", () => {
     it("List owner then item creator", async () => {
       const [owner, adder] = await createUsers(2);
       const list = await createList(owner, "list");
@@ -298,20 +330,22 @@ describe("todo", () => {
 
       const bounty = 5 * LAMPORTS_PER_SOL;
       const { item } = await addItem({
-        list,
+        listName: list.data.name,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
         user: adder,
         bounty,
         name: "An item",
       });
 
       expect(
-        await getAccountBalance(item.publicKey),
+        await getAccountBalance(item.pda),
         "initialized account has bounty"
       ).equals(bounty);
 
       const firstResult = await finishItem({
-        list,
-        item,
+        listPDA: list.publicKey,
+        itemPDA: item.pda,
         user: owner,
         listOwner: owner,
       });
@@ -319,7 +353,7 @@ describe("todo", () => {
       expect(
         firstResult.list.data.lines,
         "Item still in list after first finish"
-      ).deep.equals([item.publicKey]);
+      ).deep.equals([item.pda]);
       expect(
         firstResult.item.data.creatorFinished,
         "Creator finish is false after owner calls finish"
@@ -329,13 +363,13 @@ describe("todo", () => {
         "Owner finish flag gets set after owner calls finish"
       ).equals(true);
       expect(
-        await getAccountBalance(firstResult.item.publicKey),
+        await getAccountBalance(firstResult.item.pda),
         "Bounty remains on item after one finish call"
       ).equals(bounty);
 
       const finishResult = await finishItem({
-        list,
-        item,
+        listPDA: list.publicKey,
+        itemPDA: item.pda,
         user: adder,
         listOwner: owner,
         expectAccountClosed: true,
@@ -346,7 +380,7 @@ describe("todo", () => {
         "Item removed from list after both finish"
       ).deep.equals([]);
       expect(
-        await getAccountBalance(finishResult.item.publicKey),
+        await getAccountBalance(finishResult.item.pda),
         "Bounty remains on item after one finish call"
       ).equals(0);
       expectBalance(
@@ -363,20 +397,22 @@ describe("todo", () => {
       const ownerInitial = await getAccountBalance(owner.key.publicKey);
       const bounty = 5 * LAMPORTS_PER_SOL;
       const { item } = await addItem({
-        list,
+        listPDA: list.publicKey,
+        listName: list.data.name,
+        listOwner: list.data.listOwner,
         user: adder,
         bounty,
         name: "An item",
       });
 
       expect(
-        await getAccountBalance(item.publicKey),
+        await getAccountBalance(item.pda),
         "initialized account has bounty"
       ).equals(bounty);
 
       const firstResult = await finishItem({
-        list,
-        item,
+        listPDA: list.publicKey,
+        itemPDA: item.pda,
         user: adder,
         listOwner: owner,
       });
@@ -384,7 +420,7 @@ describe("todo", () => {
       expect(
         firstResult.list.data.lines,
         "Item still in list after first finish"
-      ).deep.equals([item.publicKey]);
+      ).deep.equals([item.pda]);
       expect(
         firstResult.item.data.creatorFinished,
         "Creator finish is true after creator calls finish"
@@ -394,13 +430,13 @@ describe("todo", () => {
         "Owner finish flag is false after creator calls finish"
       ).equals(false);
       expect(
-        await getAccountBalance(firstResult.item.publicKey),
+        await getAccountBalance(firstResult.item.pda),
         "Bounty remains on item after one finish call"
       ).equals(bounty);
 
       const finishResult = await finishItem({
-        list,
-        item,
+        listPDA: list.publicKey,
+        itemPDA: item.pda,
         user: owner,
         listOwner: owner,
         expectAccountClosed: true,
@@ -410,7 +446,7 @@ describe("todo", () => {
         "Item removed from list after both finish"
       ).deep.equals([]);
       expect(
-        await getAccountBalance(finishResult.item.publicKey),
+        await getAccountBalance(finishResult.item.pda),
         "Bounty remains on item after one finish call"
       ).equals(0);
       expectBalance(
@@ -427,7 +463,9 @@ describe("todo", () => {
 
       const bounty = 5 * LAMPORTS_PER_SOL;
       const { item } = await addItem({
-        list,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
+        listName: list.data.name,
         user: adder,
         bounty,
         name: "An item",
@@ -435,8 +473,8 @@ describe("todo", () => {
 
       try {
         await finishItem({
-          list,
-          item,
+          listPDA: list.publicKey,
+          itemPDA: item.pda,
           user: otherUser,
           listOwner: owner,
         });
@@ -448,7 +486,7 @@ describe("todo", () => {
       }
 
       expect(
-        await getAccountBalance(item.publicKey),
+        await getAccountBalance(item.pda),
         "Item balance did not change"
       ).equal(bounty);
     });
@@ -463,7 +501,9 @@ describe("todo", () => {
 
       const bounty = 5 * LAMPORTS_PER_SOL;
       const { item } = await addItem({
-        list: list1,
+        listPDA: list1.publicKey,
+        listOwner: list1.data.listOwner,
+        listName: list1.data.name,
         user: adder,
         bounty,
         name: "An item",
@@ -471,8 +511,8 @@ describe("todo", () => {
 
       try {
         await finishItem({
-          list: list2,
-          item,
+          listPDA: list2.publicKey,
+          itemPDA: item.pda,
           user: otherUser,
           listOwner: owner,
         });
@@ -484,7 +524,7 @@ describe("todo", () => {
       }
 
       expect(
-        await getAccountBalance(item.publicKey),
+        await getAccountBalance(item.pda),
         "Item balance did not change"
       ).equal(bounty);
     });
@@ -496,7 +536,9 @@ describe("todo", () => {
 
       const bounty = 5 * LAMPORTS_PER_SOL;
       const { item } = await addItem({
-        list,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
+        listName: list.data.name,
         user: adder,
         bounty,
         name: "An item",
@@ -504,8 +546,8 @@ describe("todo", () => {
 
       try {
         await finishItem({
-          list,
-          item,
+          listPDA: list.publicKey,
+          itemPDA: item.pda,
           user: owner,
           listOwner: adder,
         });
@@ -518,7 +560,7 @@ describe("todo", () => {
       }
 
       expect(
-        await getAccountBalance(item.publicKey),
+        await getAccountBalance(item.pda),
         "Item balance did not change"
       ).equal(bounty);
     });
@@ -531,29 +573,31 @@ describe("todo", () => {
 
       const bounty = 5 * LAMPORTS_PER_SOL;
       const { item } = await addItem({
-        list,
+        listPDA: list.publicKey,
+        listOwner: list.data.listOwner,
+        listName: list.data.name,
         user: adder,
         bounty,
         name: "An item",
       });
 
       expect(
-        await getAccountBalance(item.publicKey),
+        await getAccountBalance(item.pda),
         "initialized account has bounty"
       ).equals(bounty);
 
       await Promise.all([
         finishItem({
-          list,
-          item,
+          listPDA: list.publicKey,
+          itemPDA: item.pda,
           user: owner,
           listOwner: owner,
           expectAccountClosed: true,
         }),
 
         finishItem({
-          list,
-          item,
+          listPDA: list.publicKey,
+          itemPDA: item.pda,
           user: adder,
           listOwner: owner,
           expectAccountClosed: true,
@@ -562,8 +606,8 @@ describe("todo", () => {
 
       try {
         await finishItem({
-          list,
-          item,
+          listPDA: list.publicKey,
+          itemPDA: item.pda,
           user: owner,
           listOwner: owner,
           expectAccountClosed: true,
@@ -648,17 +692,18 @@ describe("todo", () => {
   }
 
   async function createList(owner: User, name: string, capacity = 16) {
-    const [listAccount, bump] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        Buffer.from("todolist"),
-        owner.key.publicKey.toBytes(),
-        Buffer.from(name.slice(0, 32)),
-      ],
-      mainProgram.programId
-    );
+    const [listAccount, listBump] =
+      await anchor.web3.PublicKey.findProgramAddress(
+        [
+          Buffer.from("todolist"),
+          owner.key.publicKey.toBytes(),
+          Buffer.from(name.slice(0, 32)),
+        ],
+        mainProgram.programId
+      );
 
     let program = programForUser(owner);
-    await program.rpc.newList(name, capacity, bump, {
+    await program.rpc.newList(name, capacity, listBump, {
       accounts: {
         list: listAccount,
         user: owner.key.publicKey,
@@ -671,114 +716,127 @@ describe("todo", () => {
   }
 
   async function addItem({
-    list,
+    listName, // 做 seed，可以不用
+    listPDA,
+    listOwner,
     user,
     name,
     bounty,
   }: {
-    list: any;
+    listName: string;
+    listPDA: any;
+    listOwner: anchor.web3.PublicKey;
     user: User;
     name: string;
     bounty: number;
   }) {
-    const itemAccount = anchor.web3.Keypair.generate();
+    const [listItemPDA, listItemBump] =
+      await anchor.web3.PublicKey.findProgramAddress(
+        [
+          Buffer.from("todolistitem"),
+          listOwner.toBytes(),
+          user.key.publicKey.toBytes(),
+          Buffer.from(name.slice(0, 32)),
+        ],
+        mainProgram.programId
+      );
+
     let program = programForUser(user);
-    await program.rpc.add(list.data.name, name, new BN(bounty), {
+    await program.rpc.add(listName, name, new BN(bounty), {
       accounts: {
-        list: list.publicKey,
-        listOwner: list.data.listOwner,
-        item: itemAccount.publicKey,
+        list: listPDA,
+        listOwner: listOwner,
+        item: listItemPDA,
         user: user.key.publicKey,
         systemProgram: SystemProgram.programId,
       },
-      signers: [user.key, itemAccount],
+      signers: [user.key],
     });
 
     let [listData, itemData] = await Promise.all([
-      program.account.todoList.fetch(list.publicKey),
-      program.account.listItem.fetch(itemAccount.publicKey),
+      program.account.todoList.fetch(listPDA),
+      program.account.listItem.fetch(listItemPDA),
     ]);
 
     return {
       list: {
-        publicKey: list.publicKey,
+        pda: listPDA,
         data: listData,
       },
       item: {
-        publicKey: itemAccount.publicKey,
+        pda: listItemPDA,
         data: itemData,
       },
     };
   }
 
   async function cancelItem({
-    list,
-    item,
+    listPDA,
+    listOwner,
+    itemPDA,
     itemCreator,
     user,
   }: {
-    list: any;
-    item: any;
+    listPDA: anchor.web3.PublicKey;
+    listOwner: anchor.web3.PublicKey;
+    itemPDA: anchor.web3.PublicKey;
     itemCreator: any;
     user: User;
   }) {
     let program = programForUser(user);
-    await program.rpc.cancel(list.data.name, {
+    await program.rpc.cancel({
       accounts: {
-        list: list.publicKey,
-        listOwner: list.data.listOwner,
-        item: item.publicKey,
+        list: listPDA,
+        listOwner,
+        item: itemPDA,
         itemCreator: itemCreator.key.publicKey,
         user: user.key.publicKey,
       },
     });
-    let listData: TypeDef<
-      Todo["accounts"][1],
-      IdlTypes<Todo>
-    > = await program.account.todoList.fetch(list.publicKey);
+    let listData = await program.account.todoList.fetch(listPDA);
     return {
       list: {
-        publicKey: list.publicKey,
+        pda: listPDA,
         data: listData,
       },
     };
   }
 
   async function finishItem({
-    list,
+    listPDA,
     listOwner,
-    item,
+    itemPDA,
     user,
     expectAccountClosed,
   }: {
-    list: any;
+    listPDA: anchor.web3.PublicKey;
     listOwner: User;
-    item: any;
+    itemPDA: anchor.web3.PublicKey;
     user: User;
     expectAccountClosed?: any;
   }) {
     let program = programForUser(user);
-    await program.rpc.finish(list.data.name, {
+    await program.rpc.finish({
       accounts: {
-        list: list.publicKey,
+        list: listPDA,
         listOwner: listOwner.key.publicKey,
-        item: item.publicKey,
+        item: itemPDA,
         user: user.key.publicKey,
       },
     });
     let [listData, itemData] = await Promise.all([
-      program.account.todoList.fetch(list.publicKey),
+      program.account.todoList.fetch(listPDA),
       expectAccountClosed
         ? null
-        : await program.account.listItem.fetch(item.publicKey),
+        : await program.account.listItem.fetch(itemPDA),
     ]);
     return {
       list: {
-        publicKey: list.publicKey,
+        pda: listPDA,
         data: listData,
       },
       item: {
-        publicKey: item.publicKey,
+        pda: itemPDA,
         data: itemData,
       },
     };

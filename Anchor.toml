@@ -1,5 +1,6 @@
 [features]
 seeds = false
+# [programs.devnet]
 [programs.localnet]
 todo = "6chWeqWm77cNqLeycGHhneL5UR5ZLn6aS5bToDdbL4CN"
 
@@ -7,6 +8,7 @@ todo = "6chWeqWm77cNqLeycGHhneL5UR5ZLn6aS5bToDdbL4CN"
 url = "https://anchor.projectserum.com"
 
 [provider]
+# cluster = "devnet"
 cluster = "localnet"
 wallet = "/Users/ttang/.config/solana/id.json"
 
