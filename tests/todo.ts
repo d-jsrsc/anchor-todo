@@ -14,7 +14,7 @@ type User = {
   provider: anchor.Provider;
 };
 
-describe("todo", () => {
+describe.skip("todo", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
@@ -322,7 +322,7 @@ describe("todo", () => {
     });
   });
 
-  describe.only("finish", () => {
+  describe("finish", () => {
     it("List owner then item creator", async () => {
       const [owner, adder] = await createUsers(2);
       const list = await createList(owner, "list");

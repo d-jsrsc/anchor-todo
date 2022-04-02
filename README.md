@@ -11,3 +11,10 @@ learn anchor with todo list
     https://twitter.com/pencilflip/status/1454141877972779013
     https://twitter.com/pencilflip/status/1506310957588430861
     https://paulx.dev/blog/2021/01/14/programming-on-solana-an-introduction/
+
+
+构建可用的 mpl-token-metadata
+```
+❯ ~/HelloWorld/metaplex-program-library/token-metadata/program 
+❯ cargo build-bpf --bpf-out-dir ../../target/deploy/ 
+````

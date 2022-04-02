@@ -22,10 +22,11 @@ import { Provider as ContractProvider } from "./contract";
 import { isProd } from "./utils";
 
 import Layout from "./components/Layout";
-import Home from "./components/Home";
-import Gallery from "./components/Gallery";
-import { ImageView, Modal } from "./components/ImageVIew";
+import Home from "./pages/Home";
+import Gallery from "./pages/Gallery";
+import { ImageView, Modal } from "./pages/ImageVIew";
 import NoMatch from "./components/NoMatch";
+import Test from "./pages/Test";
 
 function AppRoute({
   network,
@@ -48,6 +49,7 @@ function AppRoute({
           <Route index element={<Home />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="/img/:id" element={<ImageView />} />
+          <Route path="/test" element={<Test />} />
           <Route path="*" element={<NoMatch />} />
         </Route>
       </Routes>

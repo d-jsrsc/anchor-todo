@@ -1,5 +1,11 @@
 use anchor_lang::prelude::*;
 
+pub mod state;
+pub mod instructions;
+
+use state::*;
+use instructions::*;
+
 declare_id!("6chWeqWm77cNqLeycGHhneL5UR5ZLn6aS5bToDdbL4CN");
 
 const LIST_ITEM_SEED: &[u8] = b"todolistitem";
@@ -7,6 +13,7 @@ const LIST_SEED: &[u8] = b"todolist";
 
 #[program]
 pub mod todo {
+
     use anchor_lang::{
         solana_program::{program::invoke, system_instruction::transfer},
         AccountsClose,
@@ -130,6 +137,18 @@ pub mod todo {
         }
 
         Ok(())
+    }
+
+    pub fn new_tree(ctx: Context<TreeRootAccounts>, account_bump: u8) -> Result<()> {
+        instructions::build_tree::new_tree_handler(ctx, account_bump)
+    }
+
+    pub fn inject_tree_node(ctx: Context<AddTreeNodeAccounts>, index: u32, account_bump: u8) -> Result<()> {
+        instructions::build_tree::add_tree_node(ctx, account_bump, index)
+    }
+
+    pub fn extract_tree_node(ctx: Context<ExtractTreeNodeAccounts>) -> Result<()> {
+        instructions::build_tree::extract_tree_node(ctx)
     }
 }
 

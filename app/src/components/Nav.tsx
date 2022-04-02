@@ -23,6 +23,9 @@ export function NavHeader({
             <Nav.Link as={Link} to="/gallery">
               gallery
             </Nav.Link>
+            <Nav.Link as={Link} to="/test">
+              test
+            </Nav.Link>
           </Nav>
           <Nav>
             <WalletMultiButton

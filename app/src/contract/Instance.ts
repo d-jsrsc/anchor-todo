@@ -2,7 +2,15 @@ import * as anchor from "@project-serum/anchor";
 import { PublicKey, Connection } from "@solana/web3.js";
 import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
 import { BN, Program, Provider, web3 } from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID, getAccount } from "@solana/spl-token";
+import {
+  TOKEN_PROGRAM_ID,
+  getAccount,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  getOrCreateAssociatedTokenAccount,
+  createTransferCheckedInstruction,
+  createMint,
+} from "@solana/spl-token";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import log from "loglevel";
 
@@ -234,5 +242,56 @@ export class Contract {
     const info = await this._program.account.listItem.fetch(itemPDA);
 
     log.info({ info: info });
+  }
+
+  public async transferNFTToOther(
+    mint: PublicKey,
+    receiver: PublicKey,
+    wallet: WalletContextState
+  ) {
+    if (!this._connection || !wallet.publicKey) {
+      return;
+    }
+    const connection = this._connection;
+    const mtaBalancePair = await connection.getTokenLargestAccounts(mint);
+    console.log("mintTokenAccountBalancePair --", mtaBalancePair);
+    mtaBalancePair.value.forEach((item, idx) => {
+      console.log(`  ${idx}`, item.address.toString());
+    });
+    const mintTokenAccount = mtaBalancePair.value[0];
+    console.log("mintTokenAccount", mintTokenAccount.address.toString());
+
+    const ata = await getAssociatedTokenAddress(
+      mint, // mint
+      receiver
+    );
+    console.log(`ATA: ${ata.toBase58()}`);
+
+    const account = await getAccount(connection, ata);
+    console.log({ account });
+    const ataExists = !!account;
+
+    const ataInstruction = createAssociatedTokenAccountInstruction(
+      wallet.publicKey, // payer
+      ata, // ata
+      receiver, // owner
+      mint // mint
+    );
+
+    const transferInstruction = createTransferCheckedInstruction(
+      mintTokenAccount.address, // from (should be a token account)
+      mint, // mint
+      ata, // to (should be a token account)
+      wallet.publicKey, // from's owner
+      1, // amount, if your decimals is 8, send 10^8 for 1 token
+      0 // decimals
+    );
+    const transaction = ataExists
+      ? new web3.Transaction().add(transferInstruction)
+      : new web3.Transaction().add(ataInstruction, transferInstruction);
+
+    const signature = await wallet.sendTransaction(transaction, connection);
+    const result = await connection.confirmTransaction(signature, "processed");
+    log.info("transferRootNFTToOther ", result);
   }
 }
